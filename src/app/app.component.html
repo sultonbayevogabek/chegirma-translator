@@ -1,0 +1,142 @@
+<div class="p-4" *ngIf="!filesDirectory">
+   <input
+      type="text"
+      #filesDirectoryInput
+      class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+      placeholder="JSON fayllar joylashgan URL papkaning manzilini kiriting va Enter tugmasini bosing"
+      (keydown.enter)="setFilesDirectory(filesDirectoryInput.value)"
+   >
+</div>
+
+<div class="grid grid-cols-12 items-stretch h-[100vh]" *ngIf="filesDirectory">
+   <form
+      class="col-span-2 sticky top-0 flex flex-col gap-3 pt-4 pb-6 px-4 bg-gray-50 border-r"
+      #form
+      [formGroup]="translateForm"
+      (ngSubmit)="addNewWord()"
+   >
+      <label class="block">
+         <span class="block text-sm font-medium leading-6 text-gray-900">O'zbek</span>
+         <textarea
+            [formControlName]="'uz'"
+            (keydown.enter)="convert($event)"
+            (keydown.alt.enter)="$event.preventDefault(); addNewWord()"
+            class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"></textarea>
+      </label>
+
+      <label class="block relative">
+         <span class="block text-sm font-medium leading-6 text-gray-900">Kalit</span>
+         <textarea
+            [formControlName]="'key'"
+            #keyInput
+            [class.bg-red-100]="translationsKeys?.includes(keyInput?.value?.trim())"
+            [class.focus:ring-red-500]="translationsKeys?.includes(keyInput?.value?.trim())"
+            class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"></textarea>
+         <span class="text-sm text-red-500" *ngIf="translationsKeys?.includes(keyInput?.value?.trim())">Bu kalit so'z mavjud</span>
+         <span class="absolute top-7 right-1" *ngIf="convertPending">
+           <mat-spinner
+              color="accent"
+              [diameter]="20"></mat-spinner>
+         </span>
+      </label>
+
+      <label class="block relative" *ngIf="translationItem && translationItem['ru.json']">
+         <span class="block text-sm font-medium leading-6 text-gray-900">Русский</span>
+         <textarea
+            [formControlName]="'ru'"
+            class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"></textarea>
+         <span class="absolute top-7 right-1" *ngIf="convertPending">
+        <mat-spinner
+           color="accent"
+           [diameter]="20"></mat-spinner>
+      </span>
+      </label>
+
+      <button type="submit"
+              [disabled]="translateForm.invalid || translationsKeys?.includes(keyInput?.value?.trim())"
+              class="rounded-md cursor-pointer disabled:cursor-not-allowed bg-indigo-600 disabled:opacity-50 mt-3 px-3 py-2 text-sm font-semibold text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+         Qo'shish
+      </button>
+
+      <div class="flex-grow flex items-end">
+         <button type="button"
+                 (click)="exit()"
+                 class="rounded-md cursor-pointer disabled:cursor-not-allowed bg-red-600 mt-3 px-3 py-2 text-sm font-semibold text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+            Chiqish
+         </button>
+      </div>
+
+   </form>
+
+   <div class="col-span-10 flex flex-col h-full overflow-auto">
+      <div class="p-4 bg-gray-50 sticky top-0 border-b">
+         <input type="text"
+                class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                placeholder="Qidirish"
+                [(ngModel)]="searchParams.search"
+                (keydown.enter)="search()"
+         >
+
+         <div
+            *ngIf="translationItemKeyCount"
+            [class]="'grid gap-3 pt-4'"
+            [ngClass]="{
+          'grid-cols-2': translationItemKeyCount === 2,
+          'grid-cols-3': translationItemKeyCount === 3,
+          'grid-cols-4': translationItemKeyCount === 4,
+          'grid-cols-5': translationItemKeyCount === 5,
+          'grid-cols-6': translationItemKeyCount === 6
+        }"
+         >
+            <div class="col-span-1 text-center">Kalit so'z</div>
+         <div class="col-span-1 text-center" *ngIf="translationItem && translationItem['uz.json']">O'zbek</div>
+         <div class="col-span-1 text-center" *ngIf="translationItem && translationItem['ru.json']">Русский</div>
+      </div>
+   </div>
+
+   <div class="p-4 flex flex-col gap-3 flex-grow">
+      <ng-container *ngIf="total && translationItemKeyCount">
+         <div [class]="'grid gap-3'" [ngClass]="{
+          'grid-cols-2': translationItemKeyCount === 2,
+          'grid-cols-3': translationItemKeyCount === 3,
+          'grid-cols-4': translationItemKeyCount === 4,
+          'grid-cols-5': translationItemKeyCount === 5,
+          'grid-cols-6': translationItemKeyCount === 6
+        }" *ngFor="let translation of translations">
+            <label class="col-span-1 block">
+          <textarea
+             [value]="translation.key"
+             disabled
+             class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"></textarea>
+            </label>
+            <label class="col-span-1 block" *ngIf="translation['uz.json']">
+          <textarea
+              #uz
+              [value]="translation['uz.json']"
+              (keydown.enter)="edit($event, translation.key, 'uz.json', uz.value)"
+              class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"></textarea>
+            </label>
+            <label class="col-span-1 block" *ngIf="translation['ru.json']">
+          <textarea
+              #ru
+              (keydown.enter)="edit($event, translation.key, 'ru.json', ru.value)"
+              [value]="translation['ru.json']"
+              class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"></textarea>
+            </label>
+         </div>
+      </ng-container>
+   </div>
+
+   <div class="sticky bottom-0 p-4 bg-gray-50 border-t">
+      <mat-paginator
+          #paginator
+          [length]="total"
+          [pageSize]="50"
+          [showFirstLastButtons]="true"
+          (page)="changePage($event)"
+      >
+      </mat-paginator>
+   </div>
+</div>
+
+</div>
